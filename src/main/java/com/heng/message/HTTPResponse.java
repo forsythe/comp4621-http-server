@@ -18,7 +18,6 @@ public class HTTPResponse {
     private String statusLine = VERSION + " ";
     private String contentType;
 
-
     public HTTPResponse(HTTPRequest request) {
         switch (request.getMethod()) {
             case HEAD:
