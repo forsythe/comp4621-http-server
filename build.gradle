@@ -6,7 +6,7 @@ apply plugin: 'idea'
 apply plugin: 'application'
 
 sourceCompatibility = 1.8
-mainClassName = "HTTPServer"
+mainClassName = "com.heng.Main"
 
 repositories {
     mavenCentral()
