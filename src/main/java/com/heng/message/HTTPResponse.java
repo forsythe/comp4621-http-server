@@ -65,6 +65,8 @@ public class HTTPResponse {
                 return "text/html";
             case "pdf":
                 return "application/pdf";
+            case "jpg":
+                return "image/jpeg";
             case "pptx":
                 return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
             default:
