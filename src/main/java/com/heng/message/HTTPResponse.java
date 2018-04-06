@@ -15,8 +15,8 @@ public class HTTPResponse {
     private byte[] body;
 
     //Status-Line = HTTP-Version SP Status-Code SP Reason-Phrase CRLF
-    private String statusCodeAndReasonPhrase;
-    private String contentType;
+    private String statusCodeAndReasonPhrase = "";
+    private String contentType = "";
 
     public HTTPResponse(HTTPRequest request) {
         switch (request.getMethod()) {
@@ -27,15 +27,16 @@ public class HTTPResponse {
                 try {
                     File f = new File("." + request.getUri());
                     if (f.exists() && f.isFile()) {
-                        String fileExtension = f.getName().split("\\.")[1].toLowerCase();
+                        String fileExtension = f.getName().split("\\.")[1];
                         log.info("Requested content type: {}", fileExtension);
                         body = Files.readAllBytes(f.toPath());
+
                         statusCodeAndReasonPhrase = Status._200.toString();
                         log.info("Content found!");
                         contentType = getContentType(fileExtension);
                     } else {
                         statusCodeAndReasonPhrase = Status._404.toString();
-                        body = Status._404.toString().getBytes();
+                        body = ("<h1>" + Status._404.toString() + "</h1>").getBytes();
                         log.info("Content not found");
                     }
                 } catch (IOException e) {
@@ -56,18 +57,31 @@ public class HTTPResponse {
     }
 
     private String getContentType(String fileExtension) {
-        switch (fileExtension) {
+        switch (fileExtension.toLowerCase()) {
             case "css":
-                return "Content-Type: text/css";
+                return "text/css";
             case "html":
             case "htm":
-                return "Content-Type: text/html";
+                return "text/html";
+            case "pdf":
+                return "application/pdf";
+            case "pptx":
+                return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+            default:
+                return "application/octet-stream"; //aka unknown
         }
     }
 
+
     public void write(OutputStream os) throws IOException {
         DataOutputStream output = new DataOutputStream(os);
-        output.writeBytes(HTTP_VERSION + " " + statusCodeAndReasonPhrase + "\r\n");
+        String statusLine = HTTP_VERSION + " " + statusCodeAndReasonPhrase;
+        output.writeBytes(statusLine + "\r\n");
+        System.out.println(statusLine);
+
+        if (!contentType.isEmpty()) {
+            output.writeBytes("Content-Type: " + contentType + "\r\n");
+        }
 
         if (body != null) {
             output.writeBytes("\r\n");

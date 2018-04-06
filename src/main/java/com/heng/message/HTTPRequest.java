@@ -23,8 +23,9 @@ public class HTTPRequest {
 
         String line = reader.readLine();
         sb.append("\n").append(line).append("\n");
-
+        System.out.println(line);
         String[] requestLineTokens = line.split("\\s+"); //>=1 spaces
+
         try {
             method = RequestMethod.valueOf(requestLineTokens[0]);
         } catch (Exception e) {
@@ -36,8 +37,8 @@ public class HTTPRequest {
         while (!(line = reader.readLine()).isEmpty()) {
             sb.append(line).append("\n");
         }
-        System.out.println(sb.toString());
-        //log.info(sb.toString());
+        //System.out.println(sb.toString());
+        log.info(sb.toString());
     }
 
     public RequestMethod getMethod() {
