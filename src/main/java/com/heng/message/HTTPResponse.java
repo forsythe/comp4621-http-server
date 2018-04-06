@@ -26,14 +26,37 @@ public class HTTPResponse {
             case GET:
                 try {
                     File f = new File("." + request.getUri());
-                    if (f.exists() && f.isFile()) {
-                        String fileExtension = f.getName().split("\\.")[1];
-                        log.info("Requested content type: {}", fileExtension);
-                        body = Files.readAllBytes(f.toPath());
+                    if (f.exists()) {
+                        if (f.isFile()) {
+                            String fileExtension = f.getName().split("\\.")[1];
+                            log.info("Requested content type: {}", fileExtension);
+                            body = Files.readAllBytes(f.toPath());
 
-                        statusCodeAndReasonPhrase = Status._200.toString();
-                        log.info("Content found!");
-                        contentType = getContentType(fileExtension);
+                            statusCodeAndReasonPhrase = Status._200.toString();
+                            log.info("Content found!");
+                            contentType = getContentType(fileExtension);
+                        } else if (f.isDirectory()) {
+                            log.info("Requested directory: {}", f.getPath());
+
+                            StringBuilder result = new StringBuilder("<html><head><title>Index of ");
+                            result.append(f.getPath());
+                            result.append("</title></head><body><h1>Index of ");
+                            result.append(f.getPath());
+                            result.append("</h1><hr><pre>");
+
+                            File[] files = f.listFiles();
+                            if (f.getParent() != null) {
+                                result.append("<b><a href=\"/" + f.getParent() + "\">Parent Directory</a></b>\n");
+                            }
+
+                            for (File subfile : files) {
+                                result.append(" <a href=\"/" + subfile.getPath() + "\">" + subfile.getPath() + "</a>\n");
+                            }
+                            result.append("<hr></pre></body></html>");
+                            body = result.toString().getBytes();
+
+                            //contentType = "application/x-directory";
+                        }
                     } else {
                         statusCodeAndReasonPhrase = Status._404.toString();
                         body = ("<h1>" + Status._404.toString() + "</h1>").getBytes();
