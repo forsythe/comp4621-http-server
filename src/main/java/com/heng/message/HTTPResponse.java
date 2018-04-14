@@ -123,26 +123,18 @@ public class HTTPResponse {
         not compressed individually. The remote endpoint then decodes the stream by concatenating the chunks and
         uncompressing the result.
          */
-
-        //useGzip = false; ///TODO: remove
+        log.info("{} gzip", useGzip ? "Using" : "Not using");
+        log.info("{} chunked transfer encoding", useChunkedEncoding ? "Using" : "Not using");
 
         if (useGzip && useChunkedEncoding) {
-            log.info("Using gzip");
-            log.info("Using chunked transfer encoding");
             writeHeaderKeyPair(output, "Content-Encoding", "gzip");
             writeHeaderKeyPair(output, "Transfer-Encoding", "chunked");
         } else if (!useGzip && useChunkedEncoding) {
-            log.info("Not using gzip");
-            log.info("Using chunked transfer encoding");
             writeHeaderKeyPair(output, "Content-Encoding", "identity");
             writeHeaderKeyPair(output, "Transfer-Encoding", "chunked");
         } else if (useGzip && !useChunkedEncoding) {
-            log.info("Using gzip");
-            log.info("Not using chunked transfer encoding");
             writeHeaderKeyPair(output, "Content-Encoding", "gzip");
         } else { //neither gzip nor chunked encoding
-            log.info("Not using gzip");
-            log.info("Not using chunked transfer encoding");
             writeHeaderKeyPair(output, "Content-Encoding", "identity");
             writeHeaderKeyPair(output, "Content-Length", String.valueOf(body.length)); //don't use when using gzip
         }
@@ -166,6 +158,7 @@ public class HTTPResponse {
             } else if (!useGzip && useChunkedEncoding) {
                 ChunkedOutputStream cos = new ChunkedOutputStream(output);
                 cos.write(body);
+                cos.finish();
             } else if (useGzip && !useChunkedEncoding) {
                 GZIPOutputStream gzip = new GZIPOutputStream(output);
                 gzip.write(body);
@@ -174,18 +167,6 @@ public class HTTPResponse {
                 output.write(body);
             }
         }
-
-//        writeHeaderKeyPair(output, "Transfer-Encoding", "chunked"); //TODO REMOVE ME LATER
-//        output.writeBytes(CRLF);//TODO delete me
-
-//        writeLine(output, Integer.toHexString(4));
-//        writeLine(output, new String(new byte[]{'w', 'i', 'k', 'i'}));
-//        writeLine(output, Integer.toHexString(0));
-        //byte[] test = {'4', '\r', '\n', 'W', 'i', 'k', 'i', '\r', '\n', '0', '\r', '\n'};
-//        byte[] test = {'w', 'i', 'k', 'i', 'p'};
-//        ChunkedOutputStream cos = new ChunkedOutputStream(output);
-//        cos.write(body);
-//        output.write(test);
 
         output.writeBytes(CRLF);
         output.flush();
