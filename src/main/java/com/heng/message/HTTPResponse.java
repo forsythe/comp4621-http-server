@@ -59,7 +59,8 @@ public class HTTPResponse {
                         }
                     } else {
                         statusCodeAndReasonPhrase = Status._404.toString();
-                        body = ("<h1>" + Status._404.toString() + "</h1>").getBytes();
+                        File error404Page = new File("error-404-page.html");
+                        body = Files.readAllBytes(error404Page.toPath());
                         log.info("Content not found");
                     }
                 } catch (IOException e) {
@@ -92,6 +93,8 @@ public class HTTPResponse {
                 return "image/jpeg";
             case "pptx":
                 return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+            case "ppt":
+                return "application/vnd.ms-powerpoint";
             default:
                 return "application/octet-stream"; //aka unknown
         }
