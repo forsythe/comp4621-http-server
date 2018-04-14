@@ -7,26 +7,46 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 
 public class HTTPRequestHandler implements Runnable {
     private static Logger log = LoggerFactory.getLogger(HTTPRequestHandler.class);
     private final Socket client;
 
     public HTTPRequestHandler(Socket client) {
+        log.info("New client {}", client.getRemoteSocketAddress().toString());
         this.client = client;
     }
 
     @Override
     public void run() {
         try {
-            //DataInputStream inputFromClient = new DataInputStream(client.getInputStream());
-            //DataOutputStream outputToClient = new DataOutputStream(client.getOutputStream());
-            HTTPRequest request = new HTTPRequest(client.getInputStream());
-            HTTPResponse response = new HTTPResponse(request);
-            response.write(client.getOutputStream());
+
+            HTTPRequest request;
+            HTTPResponse response;
+            BufferedReader reader = new BufferedReader(new InputStreamReader(client.getInputStream()));
+            DataOutputStream output = new DataOutputStream(client.getOutputStream());
+
+            client.setSoTimeout(5000);
+            do {
+//                int available = client.getInputStream().available();
+//                System.out.println("available = " + available);
+                request = new HTTPRequest(reader);
+                response = new HTTPResponse(request);
+                response.write(output);
+            } while (request.isKeepAlive());
 
             client.close();
-        } catch (Exception e) {
+
+        } catch (SocketTimeoutException e) {
+            log.info("Socket timed out, closing");
+            try {
+                client.close();
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }

@@ -16,14 +16,19 @@ public class HTTPRequest {
     private RequestMethod method;
     private String uri;
     private String version;
+    private boolean keepAlive = true;
 
-    public HTTPRequest(InputStream is) throws IOException {
+    public HTTPRequest(BufferedReader reader) throws IOException {
         StringBuffer sb = new StringBuffer();
-        BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+//
+//        String line;
+//        while ((line = reader.readLine()) == null) {
+//            System.out.println(line);
+//        }
 
         String line = reader.readLine();
         sb.append("\n").append(line).append("\n");
-        System.out.println(line);
+        System.out.println("Request line: " + line);
         String[] requestLineTokens = line.split("\\s+"); //>=1 spaces
 
         try {
@@ -34,11 +39,14 @@ public class HTTPRequest {
         uri = requestLineTokens[1];
         version = requestLineTokens[2];
 
+        //keepAlive = "HTTP/1.1".equals(version) && (connection == null || !connection.matches("(?i).*close.*"));
+
         while (!(line = reader.readLine()).isEmpty()) {
             sb.append(line).append("\n");
         }
         //System.out.println(sb.toString());
         log.info(sb.toString());
+
     }
 
     public RequestMethod getMethod() {
@@ -51,5 +59,9 @@ public class HTTPRequest {
 
     public String getVersion() {
         return version;
+    }
+
+    public boolean isKeepAlive() {
+        return keepAlive;
     }
 }

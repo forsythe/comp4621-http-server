@@ -17,11 +17,9 @@ public class HTTPServer {
         ServerSocket svSocket = new ServerSocket(PORT);
         log.info("HTTP server listening on port {}", PORT);
         ExecutorService threadPool = Executors.newCachedThreadPool();
-
-        while (true) {
+        //while (true) {
             Socket client = svSocket.accept();
-            log.info("New client {}", client.getRemoteSocketAddress().toString());
             threadPool.execute(new HTTPRequestHandler(client));
-        }
+       // }
     }
 }

@@ -10,8 +10,9 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 
 public class HTTPResponse {
+    public static final String CRLF = "\r\n";
     private static Logger log = LoggerFactory.getLogger(HTTPResponse.class);
-    private static final String HTTP_VERSION = "HTTP/1.0";
+    private static final String HTTP_VERSION = "HTTP/1.1";
     private byte[] body;
 
     //Status-Line = HTTP-Version SP Status-Code SP Reason-Phrase CRLF
@@ -39,18 +40,20 @@ public class HTTPResponse {
                             log.info("Requested directory: {}", f.getPath());
 
                             StringBuilder result = new StringBuilder("<html><head><title>Index of ");
-                            result.append(f.getPath());
-                            result.append("</title></head><body><h1>Index of ");
-                            result.append(f.getPath());
-                            result.append("</h1><hr><pre>");
+                            result.append(f.getPath())
+                                    .append("</title></head><body><h1>Index of ")
+                                    .append(f.getPath())
+                                    .append("</h1><hr><pre>");
 
                             File[] files = f.listFiles();
                             if (f.getParent() != null) {
                                 result.append("<b><a href=\"/" + f.getParent() + "\">Parent Directory</a></b>\n");
                             }
 
-                            for (File subfile : files) {
-                                result.append(" <a href=\"/" + subfile.getPath() + "\">" + subfile.getPath() + "</a>\n");
+                            if (files != null) {
+                                for (File subfile : files) {
+                                    result.append(" <a href=\"/" + subfile.getPath() + "\">" + subfile.getPath() + "</a>\n");
+                                }
                             }
                             result.append("<hr></pre></body></html>");
                             body = result.toString().getBytes();
@@ -101,21 +104,23 @@ public class HTTPResponse {
     }
 
 
-    public void write(OutputStream os) throws IOException {
-        DataOutputStream output = new DataOutputStream(os);
+    public void write(DataOutputStream output) throws IOException {
         String statusLine = HTTP_VERSION + " " + statusCodeAndReasonPhrase;
-        output.writeBytes(statusLine + "\r\n");
+        output.writeBytes(statusLine + CRLF);
         System.out.println(statusLine);
 
         if (!contentType.isEmpty()) {
-            output.writeBytes("Content-Type: " + contentType + "\r\n");
+            output.writeBytes("Content-Type: " + contentType + CRLF);
         }
+        output.writeBytes("Content-Length: " + body.length + CRLF); //dont use when using gzip
+        output.writeBytes("Connection: keep-alive" + CRLF);
+        //output.writeBytes("Keep-Alive: timeout=15, max=100" + CRLF);
 
         if (body != null) {
-            output.writeBytes("\r\n");
+            output.writeBytes(CRLF);
             output.write(body);
         }
-        output.writeBytes("\r\n");
+        output.writeBytes(CRLF);
         output.flush();
     }
 }
