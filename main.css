@@ -94,3 +94,13 @@ table td {
     padding: 6px 13px;
     border: 1px solid #aaa;
 }
+
+.code {
+    padding: 0.2em 0.4em;
+    margin: 0;
+    font-size: 85%;
+    background-color: gray;
+    color: white;
+    border-radius: 3px;
+    font-family: monospace;
+}

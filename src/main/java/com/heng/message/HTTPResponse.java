@@ -166,15 +166,12 @@ public class HTTPResponse {
             } else if (!useGzip && useChunkedEncoding) {
                 ChunkedOutputStream cos = new ChunkedOutputStream(output);
                 cos.write(body);
-                //TESTED
             } else if (useGzip && !useChunkedEncoding) {
                 GZIPOutputStream gzip = new GZIPOutputStream(output);
                 gzip.write(body);
                 gzip.finish();
-                //TESTED
             } else { //neither gzip nor chunked encoding
                 output.write(body);
-                //TESTED
             }
         }
 
@@ -207,13 +204,14 @@ public class HTTPResponse {
         output.write(new byte[]{'\r', '\n'});
     }
 
-    class ChunkedOutputStream extends OutputStream {
+    class ChunkedOutputStream {
+        private static final int DEFAULT_BUFFER_SIZE = 2048;
         private final int bufferSize;
         OutputStream os;
 
         public ChunkedOutputStream(OutputStream os) {
             this.os = os;
-            bufferSize = 4906;
+            bufferSize = DEFAULT_BUFFER_SIZE;
         }
 
         public ChunkedOutputStream(OutputStream os, int bufferSize) {
@@ -221,13 +219,7 @@ public class HTTPResponse {
             this.bufferSize = bufferSize;
         }
 
-        @Override
-        public void write(int i) throws IOException {
-//            throw new UnsupportedOperationException();
-//            //write(new byte[]{(byte) i});
-        }
 
-        @Override
         public void write(byte[] bytes) throws IOException {
             InputStream is = new ByteArrayInputStream(bytes);
             byte[] tempBuffer = new byte[bufferSize];

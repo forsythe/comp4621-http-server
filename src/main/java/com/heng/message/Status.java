@@ -40,7 +40,8 @@ public enum Status {
     _502("502 Bad Gateway"),
     _503("503 Service Unavailable"),
     _504("504 Gateway Time-out"),
-    _505("505 HTTP Version not supported");
+    _505("505 HTTP Version not supported")
+    ;
 
     private final String reasonPhrase;
 
