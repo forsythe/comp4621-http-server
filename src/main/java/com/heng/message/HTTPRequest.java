@@ -19,10 +19,10 @@ public class HTTPRequest {
     private Map<String, String> headers = new HashMap<>();
 
     public HTTPRequest(BufferedReader reader) throws IOException {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
 
         String line = reader.readLine();
-        sb.append("\n").append(line).append("\n");
+        sb.append("\n\n").append(line).append("\n");
         String[] requestLineTokens = line.split("\\s+"); //>=1 spaces
 
         try {
@@ -35,7 +35,9 @@ public class HTTPRequest {
 
         while (!(line = reader.readLine()).isEmpty()) {
             sb.append(line).append("\n");
-            headers.put(line.split(": ")[0], line.split(": ")[1]);
+            String[] keyAndValue = line.split(": ", 2);
+            if (keyAndValue.length == 2)
+                headers.put(keyAndValue[0], keyAndValue[1]);
         }
         log.info(sb.toString());
 

@@ -5,7 +5,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.nio.file.Files;
-import java.util.Arrays;
 import java.util.zip.GZIPOutputStream;
 
 public class HTTPResponse {
@@ -37,39 +36,16 @@ public class HTTPResponse {
                             String fileExtension = f.getName().split("\\.")[1];
                             log.info("Requested content type: {}", fileExtension);
                             body = Files.readAllBytes(f.toPath());
-
                             statusCodeAndReasonPhrase = Status._200.toString();
-                            log.info("Content found!");
                             contentType = getContentType(fileExtension);
                         } else if (f.isDirectory()) {
                             log.info("Requested directory: {}", f.getPath());
-
-                            StringBuilder result = new StringBuilder("<html><head><title>Index of ");
-                            result.append(f.getPath())
-                                    .append("</title></head><body><h1>Index of ")
-                                    .append(f.getPath())
-                                    .append("</h1><hr><pre>");
-
-                            File[] files = f.listFiles();
-                            if (f.getParent() != null) {
-                                result.append("<b><a href=\"/" + f.getParent() + "\">Parent Directory</a></b>\n");
-                            }
-
-                            if (files != null) {
-                                for (File subfile : files) {
-                                    result.append(" <a href=\"/" + subfile.getPath() + "\">" + subfile.getPath() + "</a>\n");
-                                }
-                            }
-                            result.append("<hr></pre></body></html>");
-                            body = result.toString().getBytes();
-
-                            //contentType = "application/x-directory";
+                            body = generateDirectoryHtml(f).getBytes();
                         }
                     } else {
                         statusCodeAndReasonPhrase = Status._404.toString();
                         File error404Page = new File("error-404-page.html");
                         body = Files.readAllBytes(error404Page.toPath());
-                        log.info("Content not found");
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -88,7 +64,28 @@ public class HTTPResponse {
         }
     }
 
-    private String getContentType(String fileExtension) {
+    private String generateDirectoryHtml(File f) {
+        StringBuilder result = new StringBuilder("<html><head><title>Index of ");
+        result.append(f.getPath())
+                .append("</title></head><body><h1>Index of ")
+                .append(f.getPath())
+                .append("</h1><hr><pre>");
+
+        File[] files = f.listFiles();
+        if (f.getParent() != null) {
+            result.append("<b><a href=\"/" + f.getParent() + "\">Parent Directory</a></b>\n");
+        }
+
+        if (files != null) {
+            for (File subfile : files) {
+                result.append(" <a href=\"/" + subfile.getPath() + "\">" + subfile.getPath() + "</a>\n");
+            }
+        }
+        result.append("<hr></pre></body></html>");
+        return result.toString();
+    }
+
+    private static String getContentType(String fileExtension) {
         switch (fileExtension.toLowerCase()) {
             case "css":
                 return "text/css";
@@ -109,7 +106,6 @@ public class HTTPResponse {
                 return "application/octet-stream"; //aka unknown
         }
     }
-
 
     public void write(DataOutputStream output) throws IOException {
         String statusLine = HTTP_VERSION + " " + statusCodeAndReasonPhrase;
@@ -172,53 +168,14 @@ public class HTTPResponse {
         output.flush();
     }
 
-    private void writeHeaderKeyPair(DataOutputStream output, String key, String value) throws IOException {
+    private static void writeHeaderKeyPair(DataOutputStream output, String key, String value) throws IOException {
         writeLine(output, key + ": " + value);
     }
 
-    private void writeLine(DataOutputStream output, String value) throws IOException {
+    private static void writeLine(DataOutputStream output, String value) throws IOException {
         output.writeBytes(value + CRLF);
     }
 
-    private void writeLineBytes(OutputStream output, byte[] value) throws IOException {
-        output.write(value);
-        output.write(new byte[]{'\r', '\n'});
-    }
-
-    class ChunkedOutputStream {
-        private static final int DEFAULT_BUFFER_SIZE = 2048;
-        private final int bufferSize;
-        OutputStream os;
-
-        public ChunkedOutputStream(OutputStream os) {
-            this.os = os;
-            bufferSize = DEFAULT_BUFFER_SIZE;
-        }
-
-        public ChunkedOutputStream(OutputStream os, int bufferSize) {
-            this.os = os;
-            this.bufferSize = bufferSize;
-        }
 
 
-        public void write(byte[] bytes) throws IOException {
-            InputStream is = new ByteArrayInputStream(bytes);
-            byte[] tempBuffer = new byte[bufferSize];
-            int bytesRead;
-            while ((bytesRead = is.read(tempBuffer, 0, bufferSize)) != -1) {
-                //System.out.println("bytesRead = " + bytesRead);
-//                System.out.println(Integer.toHexString(bytesRead));
-//                System.out.println(Arrays.toString(Arrays.copyOfRange(tempBuffer, 0, bytesRead)));
-                writeLineBytes(os, Integer.toHexString(bytesRead).getBytes());
-                writeLineBytes(os, Arrays.copyOfRange(tempBuffer, 0, bytesRead));
-//                writeLine(os, Integer.toHexString(bytesRead));
-//                writeLine(os, new String(tempBuffer, "UTF-8").substring(0, bytesRead));
-            }
-            //System.out.println("0");
-        }
-
-        public void finish() throws IOException {
-            writeLineBytes(os, new byte[]{'0'});
-        }
-    }
 }
