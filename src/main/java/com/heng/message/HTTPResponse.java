@@ -3,23 +3,28 @@ package com.heng.message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.nio.file.Files;
+import java.util.Arrays;
+import java.util.zip.GZIPOutputStream;
 
 public class HTTPResponse {
-    public static final String CRLF = "\r\n";
+    private static final String CRLF = "\r\n";
     private static Logger log = LoggerFactory.getLogger(HTTPResponse.class);
     private static final String HTTP_VERSION = "HTTP/1.1";
+
     private byte[] body;
+    private boolean useGzip;
+    private boolean useChunkedEncoding;
 
     //Status-Line = HTTP-Version SP Status-Code SP Reason-Phrase CRLF
     private String statusCodeAndReasonPhrase = "";
     private String contentType = "";
 
     public HTTPResponse(HTTPRequest request) {
+        useGzip = request.getHeaders().getOrDefault("Accept-Encoding", "").contains("gzip");
+        useChunkedEncoding = request.getVersion().equals("HTTP/1.1");
+
         switch (request.getMethod()) {
             case HEAD:
                 statusCodeAndReasonPhrase = Status._200.toString();
@@ -87,6 +92,8 @@ public class HTTPResponse {
         switch (fileExtension.toLowerCase()) {
             case "css":
                 return "text/css";
+            case "txt":
+                return "text/plain";
             case "html":
             case "htm":
                 return "text/html";
@@ -106,21 +113,139 @@ public class HTTPResponse {
 
     public void write(DataOutputStream output) throws IOException {
         String statusLine = HTTP_VERSION + " " + statusCodeAndReasonPhrase;
-        output.writeBytes(statusLine + CRLF);
-        System.out.println(statusLine);
+        writeLine(output, statusLine);
+        log.info(statusLine);
 
-        if (!contentType.isEmpty()) {
-            output.writeBytes("Content-Type: " + contentType + CRLF);
+        /*
+        HTTP servers often use compression to optimize transmission, for example with Content-Encoding: gzip or
+        Content-Encoding: deflate. If both compression and chunked encoding are enabled, then the content stream is
+        first compressed, then chunked; so the chunk encoding itself is not compressed, and the data in each chunk is
+        not compressed individually. The remote endpoint then decodes the stream by concatenating the chunks and
+        uncompressing the result.
+         */
+
+        //useGzip = false; ///TODO: remove
+
+        if (useGzip && useChunkedEncoding) {
+            log.info("Using gzip");
+            log.info("Using chunked transfer encoding");
+            writeHeaderKeyPair(output, "Content-Encoding", "gzip");
+            writeHeaderKeyPair(output, "Transfer-Encoding", "chunked");
+        } else if (!useGzip && useChunkedEncoding) {
+            log.info("Not using gzip");
+            log.info("Using chunked transfer encoding");
+            writeHeaderKeyPair(output, "Content-Encoding", "identity");
+            writeHeaderKeyPair(output, "Transfer-Encoding", "chunked");
+        } else if (useGzip && !useChunkedEncoding) {
+            log.info("Using gzip");
+            log.info("Not using chunked transfer encoding");
+            writeHeaderKeyPair(output, "Content-Encoding", "gzip");
+        } else { //neither gzip nor chunked encoding
+            log.info("Not using gzip");
+            log.info("Not using chunked transfer encoding");
+            writeHeaderKeyPair(output, "Content-Encoding", "identity");
+            writeHeaderKeyPair(output, "Content-Length", String.valueOf(body.length)); //don't use when using gzip
         }
-        output.writeBytes("Content-Length: " + body.length + CRLF); //dont use when using gzip
-        output.writeBytes("Connection: keep-alive" + CRLF);
-        //output.writeBytes("Keep-Alive: timeout=15, max=100" + CRLF);
+
+        writeHeaderKeyPair(output, "Content-Type", contentType);
+        writeHeaderKeyPair(output, "Connection", "close");
 
         if (body != null) {
             output.writeBytes(CRLF);
-            output.write(body);
+            if (useGzip && useChunkedEncoding) {
+
+                ByteArrayOutputStream byteStream = new ByteArrayOutputStream(body.length);
+                GZIPOutputStream gzip = new GZIPOutputStream(byteStream);
+                gzip.write(body);
+                gzip.finish();
+
+                ChunkedOutputStream cos = new ChunkedOutputStream(output);
+                cos.write(byteStream.toByteArray());
+                cos.finish();
+
+            } else if (!useGzip && useChunkedEncoding) {
+                ChunkedOutputStream cos = new ChunkedOutputStream(output);
+                cos.write(body);
+                //TESTED
+            } else if (useGzip && !useChunkedEncoding) {
+                GZIPOutputStream gzip = new GZIPOutputStream(output);
+                gzip.write(body);
+                gzip.finish();
+                //TESTED
+            } else { //neither gzip nor chunked encoding
+                output.write(body);
+                //TESTED
+            }
         }
+
+//        writeHeaderKeyPair(output, "Transfer-Encoding", "chunked"); //TODO REMOVE ME LATER
+//        output.writeBytes(CRLF);//TODO delete me
+
+//        writeLine(output, Integer.toHexString(4));
+//        writeLine(output, new String(new byte[]{'w', 'i', 'k', 'i'}));
+//        writeLine(output, Integer.toHexString(0));
+        //byte[] test = {'4', '\r', '\n', 'W', 'i', 'k', 'i', '\r', '\n', '0', '\r', '\n'};
+//        byte[] test = {'w', 'i', 'k', 'i', 'p'};
+//        ChunkedOutputStream cos = new ChunkedOutputStream(output);
+//        cos.write(body);
+//        output.write(test);
+
         output.writeBytes(CRLF);
         output.flush();
+    }
+
+    private void writeHeaderKeyPair(DataOutputStream output, String key, String value) throws IOException {
+        writeLine(output, key + ": " + value);
+    }
+
+    private void writeLine(DataOutputStream output, String value) throws IOException {
+        output.writeBytes(value + CRLF);
+    }
+
+    private void writeLineBytes(OutputStream output, byte[] value) throws IOException {
+        output.write(value);
+        output.write(new byte[]{'\r', '\n'});
+    }
+
+    class ChunkedOutputStream extends OutputStream {
+        private final int bufferSize;
+        OutputStream os;
+
+        public ChunkedOutputStream(OutputStream os) {
+            this.os = os;
+            bufferSize = 4906;
+        }
+
+        public ChunkedOutputStream(OutputStream os, int bufferSize) {
+            this.os = os;
+            this.bufferSize = bufferSize;
+        }
+
+        @Override
+        public void write(int i) throws IOException {
+//            throw new UnsupportedOperationException();
+//            //write(new byte[]{(byte) i});
+        }
+
+        @Override
+        public void write(byte[] bytes) throws IOException {
+            InputStream is = new ByteArrayInputStream(bytes);
+            byte[] tempBuffer = new byte[bufferSize];
+            int bytesRead;
+            while ((bytesRead = is.read(tempBuffer, 0, bufferSize)) != -1) {
+                //System.out.println("bytesRead = " + bytesRead);
+//                System.out.println(Integer.toHexString(bytesRead));
+//                System.out.println(Arrays.toString(Arrays.copyOfRange(tempBuffer, 0, bytesRead)));
+                writeLineBytes(os, Integer.toHexString(bytesRead).getBytes());
+                writeLineBytes(os, Arrays.copyOfRange(tempBuffer, 0, bytesRead));
+//                writeLine(os, Integer.toHexString(bytesRead));
+//                writeLine(os, new String(tempBuffer, "UTF-8").substring(0, bytesRead));
+            }
+            //System.out.println("0");
+        }
+
+        public void finish() throws IOException {
+            writeLineBytes(os, new byte[]{'0'});
+        }
     }
 }

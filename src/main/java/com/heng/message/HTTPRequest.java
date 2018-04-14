@@ -5,9 +5,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.Socket;
+import java.util.HashMap;
+import java.util.Map;
 
 public class HTTPRequest {
     private static Logger log = LoggerFactory.getLogger(HTTPRequest.class);
@@ -16,19 +15,14 @@ public class HTTPRequest {
     private RequestMethod method;
     private String uri;
     private String version;
-    private boolean keepAlive = true;
+
+    private Map<String, String> headers = new HashMap<>();
 
     public HTTPRequest(BufferedReader reader) throws IOException {
         StringBuffer sb = new StringBuffer();
-//
-//        String line;
-//        while ((line = reader.readLine()) == null) {
-//            System.out.println(line);
-//        }
 
         String line = reader.readLine();
         sb.append("\n").append(line).append("\n");
-        System.out.println("Request line: " + line);
         String[] requestLineTokens = line.split("\\s+"); //>=1 spaces
 
         try {
@@ -39,12 +33,10 @@ public class HTTPRequest {
         uri = requestLineTokens[1];
         version = requestLineTokens[2];
 
-        //keepAlive = "HTTP/1.1".equals(version) && (connection == null || !connection.matches("(?i).*close.*"));
-
         while (!(line = reader.readLine()).isEmpty()) {
             sb.append(line).append("\n");
+            headers.put(line.split(": ")[0], line.split(": ")[1]);
         }
-        //System.out.println(sb.toString());
         log.info(sb.toString());
 
     }
@@ -61,7 +53,9 @@ public class HTTPRequest {
         return version;
     }
 
-    public boolean isKeepAlive() {
-        return keepAlive;
+    public Map<String, String> getHeaders() {
+        return headers;
     }
+
+
 }

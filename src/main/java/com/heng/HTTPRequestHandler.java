@@ -22,30 +22,14 @@ public class HTTPRequestHandler implements Runnable {
     @Override
     public void run() {
         try {
-
-            HTTPRequest request;
-            HTTPResponse response;
-            BufferedReader reader = new BufferedReader(new InputStreamReader(client.getInputStream()));
             DataOutputStream output = new DataOutputStream(client.getOutputStream());
+            BufferedReader reader = new BufferedReader(new InputStreamReader(client.getInputStream()));
 
-            client.setSoTimeout(5000);
-            do {
-//                int available = client.getInputStream().available();
-//                System.out.println("available = " + available);
-                request = new HTTPRequest(reader);
-                response = new HTTPResponse(request);
-                response.write(output);
-            } while (request.isKeepAlive());
+            HTTPRequest request = new HTTPRequest(reader);
+            HTTPResponse response = new HTTPResponse(request);
 
+            response.write(output);
             client.close();
-
-        } catch (SocketTimeoutException e) {
-            log.info("Socket timed out, closing");
-            try {
-                client.close();
-            } catch (IOException e1) {
-                e1.printStackTrace();
-            }
         } catch (IOException e) {
             e.printStackTrace();
         }
