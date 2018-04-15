@@ -9,15 +9,14 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class HTTPRequest {
-    private static Logger log = LoggerFactory.getLogger(HTTPRequest.class);
+    private static final Logger log = LoggerFactory.getLogger(HTTPRequest.class);
 
     //request line: <method> <uri> <version>
     private RequestMethod method;
     private String uri;
     private String version;
 
-    private Map<String, String> headers = new HashMap<>();
-    private boolean keepAlive;
+    private final Map<String, String> headers = new HashMap<>();
 
     public HTTPRequest(BufferedReader reader) throws IOException {
         StringBuilder sb = new StringBuilder();
@@ -59,7 +58,6 @@ public class HTTPRequest {
     public Map<String, String> getHeaders() {
         return headers;
     }
-
 
     public boolean isKeepAlive() {
         //HTTP/1.1: Persistent by default, unless "Connection: close" specified

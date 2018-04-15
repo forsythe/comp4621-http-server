@@ -9,13 +9,13 @@ import java.io.*;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 
-public class HTTPSessionHandler implements Runnable {
-    private static Logger log = LoggerFactory.getLogger(HTTPSessionHandler.class);
+class HTTPSessionHandler implements Runnable {
+    private static final Logger log = LoggerFactory.getLogger(HTTPSessionHandler.class);
     private static final int SO_KEEP_ALIVE_TIMEOUT_MS = 5000;
 
     private final Socket client;
-    private BufferedReader reader;
-    private DataOutputStream output;
+    private final BufferedReader reader;
+    private final DataOutputStream output;
 
     HTTPSessionHandler(Socket client, InputStream is, OutputStream os) {
         log.info("New client {}", client.getRemoteSocketAddress().toString());
@@ -50,7 +50,9 @@ public class HTTPSessionHandler implements Runnable {
                 e1.printStackTrace();
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("Invalid write request. The client may have closed the socket already. {}", e.getMessage());
+            //Bug in chrome: may request twice for files like pdf and mp3.
+            //e.printStackTrace();
         }
 
     }

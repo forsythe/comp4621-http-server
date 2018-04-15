@@ -8,14 +8,15 @@ import java.nio.file.Files;
 import java.util.zip.GZIPOutputStream;
 
 public class HTTPResponse {
+    private static final File ERROR_404_PAGE = new File("error-404-page.html");
     private static final String CRLF = "\r\n";
-    private static Logger log = LoggerFactory.getLogger(HTTPResponse.class);
+    private static final Logger log = LoggerFactory.getLogger(HTTPResponse.class);
     private static final String HTTP_VERSION = "HTTP/1.1";
 
     private final HTTPRequest request;
     private byte[] body;
-    private boolean useGzip;
-    private boolean useChunkedEncoding;
+    private final boolean useGzip;
+    private final boolean useChunkedEncoding;
 
     //Status-Line = HTTP-Version SP Status-Code SP Reason-Phrase CRLF
     private String statusCodeAndReasonPhrase = "";
@@ -40,15 +41,14 @@ public class HTTPResponse {
                             log.info("Requested content type: {}", fileExtension);
                             body = Files.readAllBytes(f.toPath());
                             statusCodeAndReasonPhrase = Status._200.toString();
-                            contentType = getContentType(fileExtension);
+                            contentType = ContentType.getContentType(fileExtension);
                         } else if (f.isDirectory()) {
                             log.info("Requested directory: {}", f.getPath());
                             body = generateDirectoryHtml(f).getBytes();
                         }
                     } else {
                         statusCodeAndReasonPhrase = Status._404.toString();
-                        File error404Page = new File("error-404-page.html");
-                        body = Files.readAllBytes(error404Page.toPath());
+                        body = Files.readAllBytes(ERROR_404_PAGE.toPath());
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -68,46 +68,24 @@ public class HTTPResponse {
     }
 
     private String generateDirectoryHtml(File f) {
-        StringBuilder result = new StringBuilder("<html><head><title>Index of ");
+        StringBuilder result = new StringBuilder("<html><head><link rel=\"stylesheet\" type=\"text/css\" href=\"/main.css\"><title>Index of ");
         result.append(f.getPath())
-                .append("</title></head><body><h1>Index of ")
+                .append("</title></head><body=\"simple-container\"><h1>Index of ")
                 .append(f.getPath())
                 .append("</h1><hr><pre>");
 
         File[] files = f.listFiles();
         if (f.getParent() != null) {
-            result.append("<b><a href=\"/" + f.getParent() + "\">Parent Directory</a></b>\n");
+            result.append("<b><a href=\"/").append(f.getParent()).append("\">Parent Directory</a></b>\n");
         }
 
         if (files != null) {
             for (File subfile : files) {
-                result.append(" <a href=\"/" + subfile.getPath() + "\">" + subfile.getPath() + "</a>\n");
+                result.append(" <a href=\"/").append(subfile.getPath()).append("\">").append(subfile.getPath()).append("</a>\n");
             }
         }
         result.append("<hr></pre></body></html>");
         return result.toString();
-    }
-
-    private static String getContentType(String fileExtension) {
-        switch (fileExtension.toLowerCase()) {
-            case "css":
-                return "text/css";
-            case "txt":
-                return "text/plain";
-            case "html":
-            case "htm":
-                return "text/html";
-            case "pdf":
-                return "application/pdf";
-            case "jpg":
-                return "image/jpeg";
-            case "pptx":
-                return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
-            case "ppt":
-                return "application/vnd.ms-powerpoint";
-            default:
-                return "application/octet-stream"; //aka unknown
-        }
     }
 
     public void write(DataOutputStream output) throws IOException {
@@ -115,10 +93,41 @@ public class HTTPResponse {
         log.info(statusLine);
 
         writeLine(output, statusLine);
+
         writeHeaderLines(output);
         writeBodyLines(output);
+
         output.writeBytes(CRLF);
         output.flush();
+    }
+
+
+    private void writeHeaderLines(DataOutputStream output) throws IOException {
+        /*
+        HTTP servers often use compression to optimize transmission, for example with Content-Encoding: gzip or
+        Content-Encoding: deflate. If both compression and chunked encoding are enabled, then the content stream is
+        first compressed, then chunked; so the chunk encoding itself is not compressed, and the data in each chunk is
+        not compressed individually. The remote endpoint then decodes the stream by concatenating the chunks and
+        uncompressing the result.
+         */
+        log.info("{} gzip", useGzip ? "Using" : "Not using");
+        log.info("{} chunked transfer encoding", useChunkedEncoding ? "Using" : "Not using");
+
+        if (useGzip && useChunkedEncoding) {
+            writeHeaderKeyPair(output, "Content-Encoding", "gzip");
+            writeHeaderKeyPair(output, "Transfer-Encoding", "chunked");
+        } else if (!useGzip && useChunkedEncoding) {
+            writeHeaderKeyPair(output, "Content-Encoding", "identity");
+            writeHeaderKeyPair(output, "Transfer-Encoding", "chunked");
+        } else if (useGzip && !useChunkedEncoding) {
+            writeHeaderKeyPair(output, "Content-Encoding", "gzip");
+        } else { //neither gzip nor chunked encoding
+            writeHeaderKeyPair(output, "Content-Encoding", "identity");
+            writeHeaderKeyPair(output, "Content-Length", String.valueOf(body.length)); //don't use when using gzip
+        }
+
+        writeHeaderKeyPair(output, "Content-Type", contentType);
+        writeHeaderKeyPair(output, "Connection", request.isKeepAlive() ? "keep-alive" : "close");
     }
 
     private void writeBodyLines(DataOutputStream output) throws IOException {
@@ -147,34 +156,6 @@ public class HTTPResponse {
                 output.write(body);
             }
         }
-    }
-
-    private void writeHeaderLines(DataOutputStream output) throws IOException {
-        /*
-        HTTP servers often use compression to optimize transmission, for example with Content-Encoding: gzip or
-        Content-Encoding: deflate. If both compression and chunked encoding are enabled, then the content stream is
-        first compressed, then chunked; so the chunk encoding itself is not compressed, and the data in each chunk is
-        not compressed individually. The remote endpoint then decodes the stream by concatenating the chunks and
-        uncompressing the result.
-         */
-        log.info("{} gzip", useGzip ? "Using" : "Not using");
-        log.info("{} chunked transfer encoding", useChunkedEncoding ? "Using" : "Not using");
-
-        if (useGzip && useChunkedEncoding) {
-            writeHeaderKeyPair(output, "Content-Encoding", "gzip");
-            writeHeaderKeyPair(output, "Transfer-Encoding", "chunked");
-        } else if (!useGzip && useChunkedEncoding) {
-            writeHeaderKeyPair(output, "Content-Encoding", "identity");
-            writeHeaderKeyPair(output, "Transfer-Encoding", "chunked");
-        } else if (useGzip && !useChunkedEncoding) {
-            writeHeaderKeyPair(output, "Content-Encoding", "gzip");
-        } else { //neither gzip nor chunked encoding
-            writeHeaderKeyPair(output, "Content-Encoding", "identity");
-            writeHeaderKeyPair(output, "Content-Length", String.valueOf(body.length)); //don't use when using gzip
-        }
-
-        writeHeaderKeyPair(output, "Content-Type", contentType);
-        writeHeaderKeyPair(output, "Connection", request.isKeepAlive() ? "keep-alive" : "close");
     }
 
     private static void writeHeaderKeyPair(DataOutputStream output, String key, String value) throws IOException {

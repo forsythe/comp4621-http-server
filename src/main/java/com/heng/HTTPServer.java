@@ -9,7 +9,7 @@ import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class HTTPServer {
+class HTTPServer {
     private static final Logger log = LoggerFactory.getLogger(HTTPServer.class);
     private static final int PORT = 80;
 

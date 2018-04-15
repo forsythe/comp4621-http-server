@@ -2,7 +2,7 @@
 ## How to start
 In the command line, run `./gradlew run`.  
 Then, navigate to [localhost/index.html](http://localhost/index.html).
-## Implemented features
+## Required features
 * Multithreading
 * Support for different filetypes
     * HTML & CSS
@@ -18,5 +18,6 @@ Then, navigate to [localhost/index.html](http://localhost/index.html).
 
 ## Extra features
 * Browse directory
-* Support for persistent connections via `Connection: keep-alive`
+* Persistent connections via `Connection: keep-alive`
+    * Default timeout in `HTTPSessionHandler.SO_KEEP_ALIVE_TIMEOUT_MS`
 * Logging
