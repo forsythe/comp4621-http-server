@@ -1,7 +1,7 @@
 # COMP4621 HTTP Server Project
 ## How to start
 In the command line, run `./gradlew run`.  
-Then, navigate to [localhost/index.html](http://localhost/index.html).
+Then, go to [http://localhost/index.html](http://localhost/index.html).
 ## Required features
 * Multithreading
 * Support for different filetypes
