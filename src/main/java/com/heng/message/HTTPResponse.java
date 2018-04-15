@@ -4,11 +4,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.Arrays;
+import java.util.regex.Pattern;
 import java.util.zip.GZIPOutputStream;
 
 public class HTTPResponse {
     private static final File ERROR_404_PAGE = new File("error-404-page.html");
+
     private static final String CRLF = "\r\n";
     private static final Logger log = LoggerFactory.getLogger(HTTPResponse.class);
     private static final String HTTP_VERSION = "HTTP/1.1";
@@ -37,7 +41,9 @@ public class HTTPResponse {
                     File f = new File("." + request.getUri());
                     if (f.exists()) {
                         if (f.isFile()) {
-                            String fileExtension = f.getName().split("\\.")[1];
+                            String[] nameAndExtension = f.getName().split("\\.");
+                            String fileExtension = nameAndExtension.length > 1 ? nameAndExtension[1] : "";
+
                             log.info("Requested content type: {}", fileExtension);
                             body = Files.readAllBytes(f.toPath());
                             statusCodeAndReasonPhrase = Status._200.toString();
@@ -134,7 +140,6 @@ public class HTTPResponse {
         if (body != null) {
             output.writeBytes(CRLF);
             if (useGzip && useChunkedEncoding) {
-
                 ByteArrayOutputStream byteStream = new ByteArrayOutputStream(body.length);
                 GZIPOutputStream gzip = new GZIPOutputStream(byteStream);
                 gzip.write(body);
@@ -143,7 +148,6 @@ public class HTTPResponse {
                 ChunkedOutputStream cos = new ChunkedOutputStream(output);
                 cos.write(byteStream.toByteArray());
                 cos.finish();
-
             } else if (!useGzip && useChunkedEncoding) {
                 ChunkedOutputStream cos = new ChunkedOutputStream(output);
                 cos.write(body);

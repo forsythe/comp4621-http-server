@@ -8,7 +8,8 @@ import java.util.Arrays;
 
 class ChunkedOutputStream {
     private static final int DEFAULT_BUFFER_SIZE = 2048;
-    public static final byte[] CRLF = {'\r', '\n'};
+    private static final byte[] CRLF = {'\r', '\n'};
+
     private final int bufferSize;
     private final OutputStream os;
 
@@ -25,7 +26,6 @@ class ChunkedOutputStream {
             byte[] size = Integer.toHexString(bytesRead).getBytes();
             writeLineBytes(os, size, 0, size.length);
             writeLineBytes(os, tempBuffer, 0, bytesRead);
-            //writeLineBytes(os, Arrays.copyOfRange(tempBuffer, 0, bytesRead));
         }
     }
 

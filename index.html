@@ -13,18 +13,19 @@
 <ul>
     <li>Multithreading</li>
     <li>Support for different filetypes
-        <ol>
+        <ul>
             <li>Text: html, <a href="main.css">css</a>, txt, java, csv</li>
             <li>Image: <a href="images.html">jpg, png, gif, svg</a>, tiff, webp</li>
             <li>Audio: midi, <a href="media/audio/dan_mason-summer_love.mp3">mp3</a>, ogg, wav, aac, weba</li>
-            <li>Video: avi, mpeg, ogv, flv, mp4, mov, wmv</li>
+            <li>Video: avi, mpeg, ogv, flv, <a href="media/video/LLRRRLRRRRRRRR.mp4">mp4</a>, mov, wmv</li>
             <li>Application: <a href="media/application/Chapter2.ppt">ppt</a>, <a href="media/application/introduction.pdf">pdf</a></li>
-        </ol>
+            <li>...and more</li>
+        </ul>
     </li>
     <li><a href="blah">User friendly 404 error</a></li>
     <li>GZIP compression
         <ul>
-            <li>Add or remove <span class="code">Accept-Encoding: gzip</span></li>
+            <li>Test with <span class="code">Accept-Encoding: gzip</span></li>
         </ul>
     </li>
     <li>Chunked transfer encoding
@@ -42,6 +43,7 @@
     <li>Persistent connections via <span class="code">Connection: keep-alive</span>
         <ul>
             <li>Default timeout in <span class="code">HTTPSessionHandler.SO_KEEP_ALIVE_TIMEOUT_MS</span></li>
+            <li>Test on firefox with <span class="code">network.http.max-persistent-connections-per-server=1</span></li>
         </ul>
     </li>
     <li>Logging</li>

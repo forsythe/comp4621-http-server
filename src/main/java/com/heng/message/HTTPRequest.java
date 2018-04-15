@@ -25,11 +25,7 @@ public class HTTPRequest {
         sb.append("\n\n").append(line).append("\n");
         String[] requestLineTokens = line.split("\\s+"); //>=1 spaces
 
-        try {
-            method = RequestMethod.valueOf(requestLineTokens[0]);
-        } catch (Exception e) {
-            throw new RuntimeException("Unknown request method: " + requestLineTokens[0]);
-        }
+        method = RequestMethod.valueOf(requestLineTokens[0]);
         uri = requestLineTokens[1];
         version = requestLineTokens[2];
 
@@ -40,7 +36,6 @@ public class HTTPRequest {
                 headers.put(keyAndValue[0], keyAndValue[1]);
         }
         log.info(sb.toString());
-
     }
 
     public RequestMethod getMethod() {
