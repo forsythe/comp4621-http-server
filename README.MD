@@ -18,4 +18,5 @@ Then, navigate to [localhost/index.html](http://localhost/index.html).
 
 ## Extra features
 * Browse directory
+* Support for persistent connections via `Connection: keep-alive`
 * Logging

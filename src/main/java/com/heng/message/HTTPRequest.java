@@ -17,6 +17,7 @@ public class HTTPRequest {
     private String version;
 
     private Map<String, String> headers = new HashMap<>();
+    private boolean keepAlive;
 
     public HTTPRequest(BufferedReader reader) throws IOException {
         StringBuilder sb = new StringBuilder();
@@ -60,4 +61,11 @@ public class HTTPRequest {
     }
 
 
+    public boolean isKeepAlive() {
+        //HTTP/1.1: Persistent by default, unless "Connection: close" specified
+        //HTTP/1.0: Must specify "Connection: keep-alive" to make it persistent
+        return (version.equals("HTTP/1.1") && !headers.getOrDefault("Connection", "").contains("close"))
+                || headers.getOrDefault("Connection", "").contains("keep-alive");
+
+    }
 }

@@ -12,6 +12,7 @@ public class HTTPResponse {
     private static Logger log = LoggerFactory.getLogger(HTTPResponse.class);
     private static final String HTTP_VERSION = "HTTP/1.1";
 
+    private final HTTPRequest request;
     private byte[] body;
     private boolean useGzip;
     private boolean useChunkedEncoding;
@@ -21,6 +22,8 @@ public class HTTPResponse {
     private String contentType = "";
 
     public HTTPResponse(HTTPRequest request) {
+        this.request = request;
+
         useGzip = request.getHeaders().getOrDefault("Accept-Encoding", "").contains("gzip");
         useChunkedEncoding = request.getVersion().equals("HTTP/1.1");
 
@@ -109,35 +112,16 @@ public class HTTPResponse {
 
     public void write(DataOutputStream output) throws IOException {
         String statusLine = HTTP_VERSION + " " + statusCodeAndReasonPhrase;
-        writeLine(output, statusLine);
         log.info(statusLine);
 
-        /*
-        HTTP servers often use compression to optimize transmission, for example with Content-Encoding: gzip or
-        Content-Encoding: deflate. If both compression and chunked encoding are enabled, then the content stream is
-        first compressed, then chunked; so the chunk encoding itself is not compressed, and the data in each chunk is
-        not compressed individually. The remote endpoint then decodes the stream by concatenating the chunks and
-        uncompressing the result.
-         */
-        log.info("{} gzip", useGzip ? "Using" : "Not using");
-        log.info("{} chunked transfer encoding", useChunkedEncoding ? "Using" : "Not using");
+        writeLine(output, statusLine);
+        writeHeaderLines(output);
+        writeBodyLines(output);
+        output.writeBytes(CRLF);
+        output.flush();
+    }
 
-        if (useGzip && useChunkedEncoding) {
-            writeHeaderKeyPair(output, "Content-Encoding", "gzip");
-            writeHeaderKeyPair(output, "Transfer-Encoding", "chunked");
-        } else if (!useGzip && useChunkedEncoding) {
-            writeHeaderKeyPair(output, "Content-Encoding", "identity");
-            writeHeaderKeyPair(output, "Transfer-Encoding", "chunked");
-        } else if (useGzip && !useChunkedEncoding) {
-            writeHeaderKeyPair(output, "Content-Encoding", "gzip");
-        } else { //neither gzip nor chunked encoding
-            writeHeaderKeyPair(output, "Content-Encoding", "identity");
-            writeHeaderKeyPair(output, "Content-Length", String.valueOf(body.length)); //don't use when using gzip
-        }
-
-        writeHeaderKeyPair(output, "Content-Type", contentType);
-        writeHeaderKeyPair(output, "Connection", "close");
-
+    private void writeBodyLines(DataOutputStream output) throws IOException {
         if (body != null) {
             output.writeBytes(CRLF);
             if (useGzip && useChunkedEncoding) {
@@ -163,9 +147,34 @@ public class HTTPResponse {
                 output.write(body);
             }
         }
+    }
 
-        output.writeBytes(CRLF);
-        output.flush();
+    private void writeHeaderLines(DataOutputStream output) throws IOException {
+        /*
+        HTTP servers often use compression to optimize transmission, for example with Content-Encoding: gzip or
+        Content-Encoding: deflate. If both compression and chunked encoding are enabled, then the content stream is
+        first compressed, then chunked; so the chunk encoding itself is not compressed, and the data in each chunk is
+        not compressed individually. The remote endpoint then decodes the stream by concatenating the chunks and
+        uncompressing the result.
+         */
+        log.info("{} gzip", useGzip ? "Using" : "Not using");
+        log.info("{} chunked transfer encoding", useChunkedEncoding ? "Using" : "Not using");
+
+        if (useGzip && useChunkedEncoding) {
+            writeHeaderKeyPair(output, "Content-Encoding", "gzip");
+            writeHeaderKeyPair(output, "Transfer-Encoding", "chunked");
+        } else if (!useGzip && useChunkedEncoding) {
+            writeHeaderKeyPair(output, "Content-Encoding", "identity");
+            writeHeaderKeyPair(output, "Transfer-Encoding", "chunked");
+        } else if (useGzip && !useChunkedEncoding) {
+            writeHeaderKeyPair(output, "Content-Encoding", "gzip");
+        } else { //neither gzip nor chunked encoding
+            writeHeaderKeyPair(output, "Content-Encoding", "identity");
+            writeHeaderKeyPair(output, "Content-Length", String.valueOf(body.length)); //don't use when using gzip
+        }
+
+        writeHeaderKeyPair(output, "Content-Type", contentType);
+        writeHeaderKeyPair(output, "Connection", request.isKeepAlive() ? "keep-alive" : "close");
     }
 
     private static void writeHeaderKeyPair(DataOutputStream output, String key, String value) throws IOException {
@@ -175,7 +184,4 @@ public class HTTPResponse {
     private static void writeLine(DataOutputStream output, String value) throws IOException {
         output.writeBytes(value + CRLF);
     }
-
-
-
 }
