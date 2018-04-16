@@ -27,12 +27,13 @@ public class HTTPResponse {
 
         useGzip = request.getHeaders().getOrDefault("Accept-Encoding", "").contains("gzip");
         useChunkedEncoding = request.getVersion().equals("HTTP/1.1");
+        //HTTP/1.1 clients MUST support chunked encoding
 
+        boolean fillBody = false;
         switch (request.getMethod()) {
-            case HEAD:
-                statusCodeAndReasonPhrase = Status._200;
-                break;
             case GET:
+                fillBody = true;
+            case HEAD:
                 try {
                     File f = new File("." + request.getUri());
                     if (f.exists()) {
@@ -42,19 +43,22 @@ public class HTTPResponse {
                             log.info("Requested content type: {}", fileExtension);
 
                             statusCodeAndReasonPhrase = Status._200;
-                            body = Files.readAllBytes(f.toPath());
+                            if (fillBody)
+                                body = Files.readAllBytes(f.toPath());
                             contentType = ContentType.getContentType(fileExtension);
                         } else if (f.isDirectory()) {
                             log.info("Requested directory: {}", f.getPath());
 
                             statusCodeAndReasonPhrase = Status._200;
-                            body = generateDirectoryHtml(f).getBytes();
+                            if (fillBody)
+                                body = generateDirectoryHtml(f).getBytes();
                             contentType = ContentType.getContentType("html");
                         }
                     } else {
                         statusCodeAndReasonPhrase = Status._404;
-                        body = Status.generateStatusPage(statusCodeAndReasonPhrase,
-                                Status._404.getFriendlyExplanation()).getBytes();
+                        if (fillBody)
+                            body = Status.generateStatusPage(statusCodeAndReasonPhrase,
+                                    Status._404.getFriendlyExplanation()).getBytes();
                         contentType = ContentType.getContentType("html");
                     }
                 } catch (IOException e) {
@@ -62,7 +66,6 @@ public class HTTPResponse {
                     log.error(e.getMessage());
                 }
                 break;
-
             case OPTIONS:
             case POST:
             case PUT:
