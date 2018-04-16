@@ -4,14 +4,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.Arrays;
-import java.util.regex.Pattern;
 import java.util.zip.GZIPOutputStream;
 
 public class HTTPResponse {
-    private static final File ERROR_404_PAGE = new File("error-404-page.html");
+    private static final File ERROR_PAGE_TEMPLATE = new File("error_page_template.html");
 
     private static final String CRLF = "\r\n";
     private static final Logger log = LoggerFactory.getLogger(HTTPResponse.class);
@@ -45,16 +42,21 @@ public class HTTPResponse {
                             String fileExtension = nameAndExtension.length > 1 ? nameAndExtension[1] : "";
 
                             log.info("Requested content type: {}", fileExtension);
-                            body = Files.readAllBytes(f.toPath());
+
                             statusCodeAndReasonPhrase = Status._200.toString();
+                            body = Files.readAllBytes(f.toPath());
                             contentType = ContentType.getContentType(fileExtension);
                         } else if (f.isDirectory()) {
                             log.info("Requested directory: {}", f.getPath());
+
+                            statusCodeAndReasonPhrase = Status._200.toString();
                             body = generateDirectoryHtml(f).getBytes();
+                            contentType = ContentType.getContentType("html");
                         }
                     } else {
                         statusCodeAndReasonPhrase = Status._404.toString();
-                        body = Files.readAllBytes(ERROR_404_PAGE.toPath());
+                        body = generateErrorPage(statusCodeAndReasonPhrase, Status._404.getFriendlyExplanation()).getBytes();
+                        contentType = ContentType.getContentType("html");
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -69,6 +71,8 @@ public class HTTPResponse {
             case TRACE:
             case CONNECT:
                 statusCodeAndReasonPhrase = Status._501.toString();
+                body = generateErrorPage(statusCodeAndReasonPhrase, Status._501.getFriendlyExplanation()).getBytes();
+                contentType = ContentType.getContentType("html");
                 break;
         }
     }
@@ -92,6 +96,20 @@ public class HTTPResponse {
         }
         result.append("<hr></pre></body></html>");
         return result.toString();
+    }
+
+    private String generateErrorPage(String errorCodeAndPhrase, String friendlyErrorExplanation) {
+        String content;
+        try {
+            content = new String(Files.readAllBytes(ERROR_PAGE_TEMPLATE.toPath()), "UTF-8");
+        } catch (IOException e) {
+            //e.printStackTrace();
+            log.error("Could not find error template page! Using fallback.");
+            content = "<html><head><title>{{ERROR_CODE}}</title></head><body><h1>{{ERROR_CODE}}</h1>{{ERROR_FRIENDLY_REASON}}</body></html>";
+        }
+        content = content.replaceAll("\\{\\{ERROR_CODE\\}\\}", errorCodeAndPhrase);
+        content = content.replaceAll("\\{\\{ERROR_FRIENDLY_REASON\\}\\}", friendlyErrorExplanation);
+        return content;
     }
 
     public void write(DataOutputStream output) throws IOException {

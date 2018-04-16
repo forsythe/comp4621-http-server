@@ -40,8 +40,7 @@ public enum Status {
     _502("502 Bad Gateway"),
     _503("503 Service Unavailable"),
     _504("504 Gateway Time-out"),
-    _505("505 HTTP Version not supported")
-    ;
+    _505("505 HTTP Version not supported");
 
     private final String reasonPhrase;
 
@@ -52,5 +51,16 @@ public enum Status {
     @Override
     public String toString() {
         return reasonPhrase;
+    }
+
+    public String getFriendlyExplanation() {
+        switch (this) {
+            case _404:
+                return "The requested URL was not found on this server.";
+            case _501:
+                return "The request method is not supported by the server and cannot be handled.";
+            default:
+                return "";
+        }
     }
 }
