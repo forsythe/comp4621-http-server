@@ -8,7 +8,6 @@ import java.nio.file.Files;
 import java.util.zip.GZIPOutputStream;
 
 public class HTTPResponse {
-    private static final File ERROR_PAGE_TEMPLATE = new File("error_page_template.html");
 
     private static final String CRLF = "\r\n";
     private static final Logger log = LoggerFactory.getLogger(HTTPResponse.class);
@@ -20,7 +19,7 @@ public class HTTPResponse {
     private final boolean useChunkedEncoding;
 
     //Status-Line = HTTP-Version SP Status-Code SP Reason-Phrase CRLF
-    private String statusCodeAndReasonPhrase = "";
+    private Status statusCodeAndReasonPhrase;
     private String contentType = "";
 
     public HTTPResponse(HTTPRequest request) {
@@ -31,7 +30,7 @@ public class HTTPResponse {
 
         switch (request.getMethod()) {
             case HEAD:
-                statusCodeAndReasonPhrase = Status._200.toString();
+                statusCodeAndReasonPhrase = Status._200;
                 break;
             case GET:
                 try {
@@ -40,22 +39,22 @@ public class HTTPResponse {
                         if (f.isFile()) {
                             String[] nameAndExtension = f.getName().split("\\.");
                             String fileExtension = nameAndExtension.length > 1 ? nameAndExtension[1] : "";
-
                             log.info("Requested content type: {}", fileExtension);
 
-                            statusCodeAndReasonPhrase = Status._200.toString();
+                            statusCodeAndReasonPhrase = Status._200;
                             body = Files.readAllBytes(f.toPath());
                             contentType = ContentType.getContentType(fileExtension);
                         } else if (f.isDirectory()) {
                             log.info("Requested directory: {}", f.getPath());
 
-                            statusCodeAndReasonPhrase = Status._200.toString();
+                            statusCodeAndReasonPhrase = Status._200;
                             body = generateDirectoryHtml(f).getBytes();
                             contentType = ContentType.getContentType("html");
                         }
                     } else {
-                        statusCodeAndReasonPhrase = Status._404.toString();
-                        body = generateErrorPage(statusCodeAndReasonPhrase, Status._404.getFriendlyExplanation()).getBytes();
+                        statusCodeAndReasonPhrase = Status._404;
+                        body = Status.generateStatusPage(statusCodeAndReasonPhrase,
+                                Status._404.getFriendlyExplanation()).getBytes();
                         contentType = ContentType.getContentType("html");
                     }
                 } catch (IOException e) {
@@ -70,8 +69,9 @@ public class HTTPResponse {
             case DELETE:
             case TRACE:
             case CONNECT:
-                statusCodeAndReasonPhrase = Status._501.toString();
-                body = generateErrorPage(statusCodeAndReasonPhrase, Status._501.getFriendlyExplanation()).getBytes();
+                statusCodeAndReasonPhrase = Status._501;
+                body = Status.generateStatusPage(statusCodeAndReasonPhrase,
+                        Status._501.getFriendlyExplanation()).getBytes();
                 contentType = ContentType.getContentType("html");
                 break;
         }
@@ -96,20 +96,6 @@ public class HTTPResponse {
         }
         result.append("<hr></pre></body></html>");
         return result.toString();
-    }
-
-    private String generateErrorPage(String errorCodeAndPhrase, String friendlyErrorExplanation) {
-        String content;
-        try {
-            content = new String(Files.readAllBytes(ERROR_PAGE_TEMPLATE.toPath()), "UTF-8");
-        } catch (IOException e) {
-            //e.printStackTrace();
-            log.error("Could not find error template page! Using fallback.");
-            content = "<html><head><title>{{ERROR_CODE}}</title></head><body><h1>{{ERROR_CODE}}</h1>{{ERROR_FRIENDLY_REASON}}</body></html>";
-        }
-        content = content.replaceAll("\\{\\{ERROR_CODE\\}\\}", errorCodeAndPhrase);
-        content = content.replaceAll("\\{\\{ERROR_FRIENDLY_REASON\\}\\}", friendlyErrorExplanation);
-        return content;
     }
 
     public void write(DataOutputStream output) throws IOException {

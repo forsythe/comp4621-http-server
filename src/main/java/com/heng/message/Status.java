@@ -1,5 +1,12 @@
 package com.heng.message;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+
 public enum Status {
     _100("100 Continue"),
     _101("101 Switching Protocols"),
@@ -42,10 +49,26 @@ public enum Status {
     _504("504 Gateway Time-out"),
     _505("505 HTTP Version not supported");
 
+    private static final Logger log = LoggerFactory.getLogger(Status.class);
+    private static final File ERROR_PAGE_TEMPLATE = new File("error_page_template.html");
     private final String reasonPhrase;
 
     Status(String reasonPhrase) {
         this.reasonPhrase = reasonPhrase;
+    }
+
+    static String generateStatusPage(Status errorCodeAndPhrase, String friendlyErrorExplanation) {
+        String content;
+        try {
+            content = new String(Files.readAllBytes(ERROR_PAGE_TEMPLATE.toPath()), "UTF-8");
+        } catch (IOException e) {
+            //e.printStackTrace();
+            log.error("Could not find error template page! Using fallback.");
+            content = "<html><head><title>{{ERROR_CODE}}</title></head><body><h1>{{ERROR_CODE}}</h1>{{ERROR_FRIENDLY_REASON}}</body></html>";
+        }
+        content = content.replaceAll("\\{\\{ERROR_CODE\\}\\}", errorCodeAndPhrase.toString());
+        content = content.replaceAll("\\{\\{ERROR_FRIENDLY_REASON\\}\\}", friendlyErrorExplanation);
+        return content;
     }
 
     @Override
@@ -53,7 +76,7 @@ public enum Status {
         return reasonPhrase;
     }
 
-    public String getFriendlyExplanation() {
+    String getFriendlyExplanation() {
         switch (this) {
             case _404:
                 return "The requested URL was not found on this server.";
