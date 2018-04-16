@@ -19,9 +19,11 @@ public class HTTPRequest {
     private final Map<String, String> headers = new HashMap<>();
 
     public HTTPRequest(BufferedReader reader) throws IOException {
-        StringBuilder sb = new StringBuilder();
-
         String line = reader.readLine();
+        if (line == null)
+            throw new RuntimeException("Invalid HTTPRequest, couldn't read stream.");
+
+        StringBuilder sb = new StringBuilder();
         sb.append("\n\n").append(line).append("\n");
         String[] requestLineTokens = line.split("\\s+"); //>=1 spaces
 

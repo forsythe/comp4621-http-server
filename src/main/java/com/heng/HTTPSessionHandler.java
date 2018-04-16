@@ -49,6 +49,8 @@ class HTTPSessionHandler implements Runnable {
             } catch (IOException e1) {
                 e1.printStackTrace();
             }
+        } catch (RuntimeException e) {
+            log.warn(e.getMessage());
         } catch (IOException e) {
             log.warn("Invalid write request. The client may have closed the socket already. {}", e.getMessage());
             //Bug in chrome: may request twice for files like pdf and mp3.

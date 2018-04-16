@@ -16,7 +16,7 @@ class HTTPServer {
     public void start() throws IOException {
         ServerSocket svSocket = new ServerSocket(PORT);
         log.info("HTTP server running on port {}. Go to http://localhost/index.html to get started!", PORT);
-        ExecutorService threadPool = Executors.newCachedThreadPool();
+        ExecutorService threadPool = Executors.newFixedThreadPool(200);
         while (true) {
             Socket client = svSocket.accept();
             threadPool.execute(new HTTPSessionHandler(client, client.getInputStream(), client.getOutputStream()));
