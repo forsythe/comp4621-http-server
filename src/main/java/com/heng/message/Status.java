@@ -57,7 +57,7 @@ public enum Status {
         this.reasonPhrase = reasonPhrase;
     }
 
-    static String generateStatusPage(Status errorCodeAndPhrase, String friendlyErrorExplanation) {
+    static String generateStatusPage(Status statusCodeAndPhrase) {
         String content;
         try {
             content = new String(Files.readAllBytes(ERROR_PAGE_TEMPLATE.toPath()), "UTF-8");
@@ -66,8 +66,8 @@ public enum Status {
             log.error("Could not find error template page! Using fallback.");
             content = "<html><head><title>{{ERROR_CODE}}</title></head><body><h1>{{ERROR_CODE}}</h1>{{ERROR_FRIENDLY_REASON}}</body></html>";
         }
-        content = content.replaceAll("\\{\\{ERROR_CODE\\}\\}", errorCodeAndPhrase.toString());
-        content = content.replaceAll("\\{\\{ERROR_FRIENDLY_REASON\\}\\}", friendlyErrorExplanation);
+        content = content.replaceAll("\\{\\{ERROR_CODE\\}\\}", statusCodeAndPhrase.toString());
+        content = content.replaceAll("\\{\\{ERROR_FRIENDLY_REASON\\}\\}", statusCodeAndPhrase.getFriendlyExplanation());
         return content;
     }
 

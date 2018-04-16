@@ -24,13 +24,11 @@ class HTTPSessionHandler implements Runnable {
         this.output = new DataOutputStream(os);
     }
 
-
     @Override
     public void run() {
         try {
             client.setKeepAlive(true);
             client.setSoTimeout(SO_KEEP_ALIVE_TIMEOUT_MS);
-
             HTTPRequest request;
             HTTPResponse response;
 
@@ -38,9 +36,7 @@ class HTTPSessionHandler implements Runnable {
                 request = new HTTPRequest(reader);
                 response = new HTTPResponse(request);
                 response.write(output);
-
             } while (request.isKeepAlive());
-
             client.close();
         } catch (SocketTimeoutException e) {
             log.info("{} timed out after {} ms, closing.", client.toString(), SO_KEEP_ALIVE_TIMEOUT_MS);

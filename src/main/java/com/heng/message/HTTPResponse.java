@@ -57,8 +57,7 @@ public class HTTPResponse {
                     } else {
                         statusCodeAndReasonPhrase = Status._404;
                         if (fillBody)
-                            body = Status.generateStatusPage(statusCodeAndReasonPhrase,
-                                    Status._404.getFriendlyExplanation()).getBytes();
+                            body = Status.generateStatusPage(statusCodeAndReasonPhrase).getBytes();
                         contentType = ContentType.getContentType("html");
                     }
                 } catch (IOException e) {
@@ -73,8 +72,7 @@ public class HTTPResponse {
             case TRACE:
             case CONNECT:
                 statusCodeAndReasonPhrase = Status._501;
-                body = Status.generateStatusPage(statusCodeAndReasonPhrase,
-                        Status._501.getFriendlyExplanation()).getBytes();
+                body = Status.generateStatusPage(statusCodeAndReasonPhrase).getBytes();
                 contentType = ContentType.getContentType("html");
                 break;
         }
